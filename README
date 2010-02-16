@@ -7,4 +7,3 @@ Directive commands:
                                           Default: locaslhost/requested-path
   HttpRequestAuth-RequestPort port        Authentication request port.
                                           Default: 80
-  Must to be set RequestURI or RequestPort.
