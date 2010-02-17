@@ -24,6 +24,6 @@ Directive commands:
   HttpRequestAuth-RequestPort port        Authentication request port.
                                           Default: 80
 
-  HttpRequestAuth-DumpResult  {On|Off}    Enable/Disable Authenticate result.
+  HttpRequestAuth-DumpResult  {On|Off}    Enable/Disable Authenticate result dumping to error_log.
                                           (Independed of 'HttpRequestAuth'.)
 
