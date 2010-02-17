@@ -1,5 +1,21 @@
 mod_auth_httprequest
-  Copyright 2010, Toshiyuki Suzumura. under Apache license.
+  Copyright 2010, Toshiyuki Suzumura, under Apache License, Version 2.0
+      http://github.com/suzumura-ss/mod_auth_httprequest
+      http://www.apache.org/licenses/LICENSE-2.0
+
+
+- Input request headers:
+  All headers is bypassed to request to `X-Auth-HttpRequest-URI`
+
+- Output request headers, when "OK", "Created", "Accepted":
+  Following request headers are appended.
+    ENV['REMOTE_USER']   `HttpRequestAuth-RequestURI` string.
+    ENV['AUTH_TYPE']     "X-Auth-HttpRequest-URI".
+
+- Output response headers and body, when "Unauthorized", "Forbidden".
+  All headers and body is bypassed to response.
+  Original request is not requested.
+
 
 Directive commands:
   HttpRequestAuth             {On|Off}    Enable/Disable module.
@@ -7,3 +23,7 @@ Directive commands:
                                           Default: locaslhost/requested-path
   HttpRequestAuth-RequestPort port        Authentication request port.
                                           Default: 80
+
+  HttpRequestAuth-DumpResult  {On|Off}    Enable/Disable Authenticate result.
+                                          (Independed of 'HttpRequestAuth'.)
+
