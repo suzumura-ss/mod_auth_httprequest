@@ -23,6 +23,7 @@ Directive commands:
                                           Default: locaslhost/requested-path
   HttpRequestAuth-RequestPort port        Authentication request port.
                                           Default: 80
+  HttpRequestAuth-Secret      filename    Binary data to detect recursive request.
 
   HttpRequestAuth-DumpResult  {On|Off}    Enable/Disable Authenticate result dumping to error_log.
                                           (Independed of 'HttpRequestAuth'.)

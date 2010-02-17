@@ -2,11 +2,12 @@
 #include "http_config.h"
 #include "http_protocol.h"
 #include "http_request.h"
-#include "ap_config.h"
 #include "http_log.h"
+#include "ap_config.h"
+#include "ap_mpm.h"
 #include "apr_lib.h"
 #include "apr_strings.h"
-#include "ap_mpm.h"
+#include "util_md5.h"
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -18,8 +19,9 @@
 #define ENABLED   (1)
 
 static const char VERSION[] = "mod_auth_httprequest/0.1";
-static const char X_AUTH_HTTPREQUEST_URI[] = "X-Auth-HttpRequest-URI";
-static const char DUMP_AUTH_RESULT[]       = "X-Auth-HttpRequest-URI_DumpResult";
+static const char X_AUTH_HTTPREQUEST_URI[]    = "X-Auth-HttpRequest-URI";
+static const char X_AUTH_HTTPREQUEST_SECRET[] = "X-Auth-HttpRequest-Secret";
+static const char DUMP_AUTH_RESULT[]          = "X-Auth-HttpRequest-URI_DumpResult";
 
 module AP_MODULE_DECLARE_DATA auth_httprequest_module;
 
@@ -35,6 +37,7 @@ typedef struct {
   short dump;
   int   port;
   char* uri;
+  char* secret;
 } auth_conf;
 
 
@@ -200,6 +203,7 @@ static int httprequest_auth_handler(request_rec *rec)
   auth_conf*  conf = (auth_conf*)ap_get_module_config(rec->per_dir_config, &auth_httprequest_module);
   context     ctx;
   CURLcode    ret;
+  const char* p;
   int threaded_mpm;
   int code=0;
 
@@ -210,9 +214,15 @@ static int httprequest_auth_handler(request_rec *rec)
 
   AP_LOG_DEBUG(rec, "Incomming %s Enabled=%d, URI=%s, port=%d", __FUNCTION__, conf->enabled, conf->uri, conf->port);
   AP_LOG_DEBUG(rec, "  %s %s", rec->method, rec->uri);
-  if(apr_table_get(rec->headers_in, X_AUTH_HTTPREQUEST_URI)!=NULL) {
-    AP_LOG_WARN(rec, "Check config. Nested request.");
-    return OK;
+  p = apr_table_get(rec->headers_in, X_AUTH_HTTPREQUEST_SECRET);
+  if(p) {
+    AP_LOG_DEBUG(rec, "  %s: %s", X_AUTH_HTTPREQUEST_SECRET, p);
+    if(strcmp(p, conf->secret)==0) {
+      AP_LOG_WARN(rec, "Check config. Nested request.");
+      return OK;
+    } else {
+      AP_LOG_INFO(rec, "Check config. Nested request, and bad secret.");
+    }
   }
 
   // Initialize callback-context.
@@ -229,6 +239,7 @@ static int httprequest_auth_handler(request_rec *rec)
   // Bypass request headers, set 'X-Auth-HttpRequest-URI'.
   apr_table_do(each_headers_proc, &ctx, rec->headers_in, NULL);
   each_headers_proc(&ctx, X_AUTH_HTTPREQUEST_URI, rec->uri);
+  each_headers_proc(&ctx, X_AUTH_HTTPREQUEST_SECRET, conf->secret);
 
   // Setup URL, port, to bypass response headers and body.
   if(conf->port!=UNSET) curl_easy_setopt(ctx.curl, CURLOPT_PORT, conf->port);
@@ -286,7 +297,8 @@ static void* config_create(apr_pool_t* p)
   conf->enabled = UNSET;
   conf->dump = UNSET;
   conf->port = UNSET;
-  conf->uri = NULL;
+  conf->uri = "localhost%s";
+  conf->secret = ap_md5(p, (unsigned char*)__FILE__);
 
   return conf;
 }
@@ -310,6 +322,7 @@ static void* config_merge(apr_pool_t* p, void* _base, void* _override)
   conf->dump = (override->dump!=UNSET) ? override->dump : base->dump;
   conf->port = (override->port!=UNSET) ? override->port : base->port;
   conf->uri  = apr_pstrdup(p, (override->uri!=NULL)? override->uri: base->uri);
+  conf->secret = apr_pstrdup(p, (override->secret!=NULL)? override->secret: base->secret);
 
   return conf;
 }
@@ -356,11 +369,28 @@ static const char* auth_uri(cmd_parms* cmd, void* _conf, const char* param)
   return NULL;
 }
 
+static const char* auth_secret(cmd_parms* cmd, void* _conf, const char* param)
+{
+  auth_conf* conf = _conf;
+  int fd, rd=0;
+  unsigned char buf[256];
+
+  if((fd=open(param, O_RDONLY))>=0) {
+    rd = read(fd, buf, sizeof(buf));
+    conf->secret = ap_md5_binary(conf->pool, buf, sizeof(buf));
+    close(fd);
+  } else {
+    return "Could not read file.";
+  }
+  return NULL;
+}
+
 static const command_rec config_cmds[] = {
   AP_INIT_FLAG( "HttpRequestAuth", auth_enable, NULL, OR_OPTIONS, "On|Off"),
   AP_INIT_FLAG( "HttpRequestAuth-DumpResult", auth_dump, NULL, OR_OPTIONS, "On|Off"),
   AP_INIT_TAKE1("HttpRequestAuth-RequestURI", auth_uri, NULL, OR_OPTIONS, "Authentication request uri"),
   AP_INIT_TAKE1("HttpRequestAuth-RequestPort", auth_port, NULL, OR_OPTIONS, "Authentication request port"),
+  AP_INIT_TAKE1("HttpRequestAuth-Secret", auth_secret, NULL, OR_OPTIONS, "File name for binary data that secret."),
   { NULL },
 };
 
