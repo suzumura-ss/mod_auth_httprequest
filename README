@@ -12,19 +12,18 @@ mod_auth_httprequest
     ENV['REMOTE_USER']   `HttpRequestAuth-RequestURI` string.
     ENV['AUTH_TYPE']     "X-Auth-HttpRequest-URI".
 
-- Output response headers and body, when "Unauthorized", "Forbidden".
-  All headers and body is bypassed to response.
+- Output response headers and body, authentication failed:
+  All headers are bypassed to response.
   Original request is not requested.
 
 
 Directive commands:
-  HttpRequestAuth             {On|Off}    Enable/Disable module.
-  HttpRequestAuth-RequestURI  uri         Authentication request URI.
-                                          Default: locaslhost/requested-path
-  HttpRequestAuth-RequestPort port        Authentication request port.
-                                          Default: 80
-  HttpRequestAuth-Secret      filename    Binary data to detect recursive request.
+  Require   valid-request       Use this authentication.
+  AuthType  AuthHttpRequest     Use this authentication.
+  AuthName  X-Auth-HttpRequest  (ignored)
 
-  HttpRequestAuth-DumpResult  {On|Off}    Enable/Disable Authenticate result dumping to error_log.
-                                          (Independed of 'HttpRequestAuth'.)
-
+  HttpRequestAuth-RequestURI    uri             Authentication request URI.
+                                                Default: locaslhost/requested-path
+  HttpRequestAuth-Secret        filename        Binary data to detect recursive request.
+  HttpRequestAuth-ErrorDocument string or URL   Custom error document. "%d" as response code.
+                                                Default: apache default.
