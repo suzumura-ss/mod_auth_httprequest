@@ -7,9 +7,11 @@ mod_auth_httprequest
 
 (1) 元リクエストの全てのリクエストヘッダと以下のリクエストヘッダにてリクエストします。
     X-AuthHttpRequest-URL:    このリクエストのURL
+    X-AuthHttpRequest-Method: このリクエストのメソッド
     X-AuthHttpRequest-Secret: 再帰的なHTTPリクエストを防止する文字列
     例:
       X-AuthHttpRequest-URL: /index.html
+      X-AuthHttpRequest-Method: GET
       X-AuthHttpRequest-Secret: b41d38160ff124d7ecfe717e657846db 
 
 (2a) "OK", "Created", "Accepted" の場合は認証されリクエストが継続されます。
@@ -43,12 +45,14 @@ mod_auth_httprequest
 
   HttpRequestAuth-Secret        "filename"
     再帰的なリクエストを検出するための文字列(secret)を生成する元ファイルを指定します。
-    secretのデフォルト値はコードに埋め込まれています。
+    デフォルトでは再帰的リクエストを検出しません。
+    セキュリティ上の理由から、外部サービスを提供する場合はデフォルトで利用することを強く奨励します。
     例:
       HttpRequestAuth-Secret  "/dev/random"
       - 乱数を使用します。
         この場合httpdのインスタンス毎に異なるsecretになり再帰的なリクエストの検出が困難
         になります。再帰的な呼び出しにならないように VirtualHost などを利用してください。
+
 
   HttpRequestAuth-ErrorDocument "string"
     カスタムエラードキュメントを指定します。

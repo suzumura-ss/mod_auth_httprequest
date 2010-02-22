@@ -24,7 +24,8 @@
 #define HR_AUTH   "AuthHttpRequest"
 #define X_HR_AUTH "X-Auth-HttpRequest"
 static const char VERSION[] = "mod_auth_httprequest/0.1";
-static const char X_AUTH_HTTPREQUEST_URL[]  = X_HR_AUTH "-URL";
+static const char X_AUTH_HTTPREQUEST_URL[]    = X_HR_AUTH "-URL";
+static const char X_AUTH_HTTPREQUEST_METHOD[] = X_HR_AUTH "-Method";
 static const char SECRET[]           = X_HR_AUTH "-Secret";
 static const char DUMP_AUTH_RESULT[] = X_HR_AUTH "-DumpResult";
 
@@ -220,7 +221,8 @@ static int check_auth_handler(request_rec *rec)
   // Bypass request headers, set 'X-Auth-HttpRequest-URI'.
   apr_table_do(each_headers_proc, &ctx, rec->headers_in, NULL);
   each_headers_proc(&ctx, X_AUTH_HTTPREQUEST_URL, rec->uri);
-  each_headers_proc(&ctx, SECRET, conf->secret);
+  each_headers_proc(&ctx, X_AUTH_HTTPREQUEST_METHOD, rec->method);
+  if(conf->secret[0]) each_headers_proc(&ctx, SECRET, conf->secret);
 
   // Setup URL to bypass response headers and body.
   curl_easy_setopt(ctx.curl, CURLOPT_URL, url = apr_psprintf(rec->pool, conf->url, rec->uri));
@@ -322,7 +324,7 @@ static void* config_create(apr_pool_t* p, char* path)
   conf->pool = p;
   conf->dump = UNSET;
   conf->url = "localhost%s";
-  conf->secret = apr_pstrdup(p, "b41d38160ff124d7ecfe717e657846db");
+  conf->secret = "";
   conf->errdoc = NULL;
 
   return conf;
